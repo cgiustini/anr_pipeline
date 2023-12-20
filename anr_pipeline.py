@@ -62,7 +62,7 @@ def get_artist_data_from_subgenres(subgenre, access_token):
     # you get all the data.
     limit = 50
     offset = 0
-    q_str = 'subgenre:"' + subgenre + '"'
+    q_str = 'genre:"' + subgenre + '"'
     print(q_str)
 
     artist_data = []
@@ -133,7 +133,9 @@ start_artist_names = [
     'Ranj', 'Clifr', 'Umair', 'Abhi The Nomad', 'MC Stan','Young Stunners',
     'Prabh Singh', 'Prabh Deep', 'Lifafa', 'Badshah', 'Taimoor Baig', 'Umair'
 ]
-start_artist_names = start_artist_names[0:4]
+# start_artist_names = [
+#     'AP Dhillon'
+# ]
 
 popularity_threshold = 50
 
@@ -194,6 +196,13 @@ for a in popular_artist_data:
         metadata[m] = a[m]
     popular_artist_metadata.append(metadata)
 
+# genres_correct = True
+# for a in popular_artist_data:
+#     this_genres_correct = np.any([g in subgenres for g in a['genres']])
+#     print(a['name']) if not this_genres_correct else None
+#     genres_correct = this_genres_correct & np.any([g in subgenres for g in a['genres']])
+
+
 # Create 
 popularity_df_data = {a['name']:[a['popularity']] for a in popular_artist_data}
 followers_df_data = {a['name']:[a['followers']['total']] for a in popular_artist_data}
@@ -246,5 +255,5 @@ with open(artist_metadata_file , "w") as f:
     json.dump(popular_artist_metadata, f, indent=4)
 
 
-# import IPython
-# IPython.embed()
+import IPython
+IPython.embed()
