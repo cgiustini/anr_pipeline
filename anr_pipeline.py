@@ -242,6 +242,22 @@ unique_df = df.iloc[unique_name_idx]
 
 popular_df = unique_df[unique_df.popularity > popularity_threshold]
 
+dump_df = popular_df
+
+data_timestamp = datetime.datetime.now()
+data_timestamp_str = data_timestamp.strftime("%m-%d-%Y, %H:%M:%S")
+
+artist_df = dump_df[['name', 'id', 'link', 'genres']]
+
+popular_df = pd.DataFrame(dump_df['name'])
+popular_df[data_timestamp_str] = dump_df['popularity']
+
+followers_df = pd.DataFrame(dump_df['name'])
+followers_df[data_timestamp_str] = dump_df['followers']
+
+artist_df.to_csv('artist.csv')
+popular_df.to_csv('popularity.csv')
+followers_df.to_csv('followers.csv')
 
 
 # # Remove duplicate entries of artist data.
