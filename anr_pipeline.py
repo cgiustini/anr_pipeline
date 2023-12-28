@@ -171,6 +171,17 @@ def build_artist_df(artist_data):
 
     return df
 
+def update_csv(df, csv_file):
+
+    if os.path.isfile(csv_file):
+        old_df = pd.read_csv(csv_file)
+        new_df = old_df.merge(df, how='outer', on='name')
+        new_df = new_df.sort_values(by=['name'])
+    else:
+        new_df = df
+
+    new_df.to_csv(csv_file, index=False)
+
 start_artist_names = [
     'AP Dhillon', 'Raf Saperra', 'Rovalio', 'Divine', 
     'Prateek Kuhad', 'Lisa Mishra','Rahul', 'Abdullah Siddiqui', 'Ikky', 
@@ -181,12 +192,7 @@ start_artist_names = [
 # start_artist_names = [
 #     'AP Dhillon'
 # ]
-access_token = get_access_token(client_id, client_secret)
-artist_data = get_artist_data(start_artist_names[0], access_token, True)
 
-# df = build_artist_df(artist_data)
-
-# IPython.embed()
 
 
 popularity_threshold = 50
@@ -240,25 +246,43 @@ df = build_artist_df(artist_data)
 unique_name, unique_name_idx = np.unique(df['name'], return_index=True)
 unique_df = df.iloc[unique_name_idx]
 
-popular_df = unique_df[unique_df.popularity > popularity_threshold]
+popularity_df = unique_df[unique_df.popularity > popularity_threshold]
 
-dump_df = popular_df
+dump_df = popularity_df
 
 data_timestamp = datetime.datetime.now()
 data_timestamp_str = data_timestamp.strftime("%m-%d-%Y, %H:%M:%S")
 
 artist_df = dump_df[['name', 'id', 'link', 'genres']]
 
-popular_df = pd.DataFrame(dump_df['name'])
-popular_df[data_timestamp_str] = dump_df['popularity']
+popularity_df = pd.DataFrame(dump_df['name'])
+popularity_df[data_timestamp_str] = dump_df['popularity']
 
 followers_df = pd.DataFrame(dump_df['name'])
 followers_df[data_timestamp_str] = dump_df['followers']
 
-artist_df.to_csv('artist.csv')
-popular_df.to_csv('popularity.csv')
-followers_df.to_csv('followers.csv')
+update_csv(artist_df, 'artist.csv')
+update_csv(popularity_df, 'popularity.csv')
+update_csv(followers_df, 'followers.csv')
 
+# artist_df.to_csv('artist_2.csv', index=False)
+# popularity_df.to_csv('popularity_2.csv', index=False)
+# followers_df.to_csv('followers_2.csv', index=False)
+
+
+# if __name__ == "__main__":
+
+    
+    
+#     df1 = pd.read_csv('popularity.csv')
+#     df2 = pd.read_csv('popularity_2.csv')
+
+#     df3 = df1.merge(df2, how='outer', on='name')
+#     df3 = df3.sort_values(by=['name'])
+#     df3.to_csv('popularity_3.csv', index=False)
+
+#     IPython.embed()
+    
 
 # # Remove duplicate entries of artist data.
 # unique_artist_data = remove_duplicates_from_artist_data(artist_data)
@@ -347,5 +371,5 @@ followers_df.to_csv('followers.csv')
 #     json.dump(popular_artist_metadata, f, indent=4)
 
 
-import IPython
-IPython.embed()
+# import IPython
+# IPython.embed()
