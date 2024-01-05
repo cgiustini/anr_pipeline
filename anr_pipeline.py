@@ -6,6 +6,7 @@ import datetime
 import os
 import pickle
 import numpy as np
+import copy
 import IPython
 
 
@@ -196,7 +197,29 @@ def build_data_dfs(df, data_timestamp):
 
     return artist_df, popularity_df, followers_df
 
-start_artist_names = [
+def get_genres(seed_artists, include_genres, exclude_genres):
+
+    # Start with include genres.
+    genres = copy.copy(include_genres)
+
+    # Search through artists and get their genres.
+    seed_artist_genres = []
+    for a in seed_artists:
+        artist_id = search_artist(a, access_token)
+        this_artist_genres = get_artist_genres(artist_id, access_token)
+        for s in this_artist_genres:
+            seed_artist_genres.append(s)
+
+    # Remove genres in exclude genres.
+    genres = [s for s in seed_artist_genres if s not in exclude_genres]
+
+    # Remove duplicate genres.
+    genres = list(set(genres))
+
+    return genres
+    
+
+seed_artists = [
     'AP Dhillon', 'Raf Saperra', 'Rovalio', 'Divine', 
     'Prateek Kuhad', 'Lisa Mishra','Rahul', 'Abdullah Siddiqui', 'Ikky', 
     'Shubh', 'Karan Aujla', 'Hassan Raheem', 'AUR', 'King', 'Sharn', 
@@ -212,7 +235,8 @@ start_artist_names = [
 popularity_threshold = 50
 
 
-exclude_subgenres = ['art pop', 'chicago rap', 'norwegian pop', 'folk-pop']
+include_genres = []
+exclude_genres = ['art pop', 'chicago rap', 'norwegian pop', 'folk-pop']
 
 # Subgenre strings for reference.
 subgenres_refernce = {'hindi indie', 'pakistani indie', 'folk-pop', 'hindi hip hop', 'bhangra', 'pakistani hip hop', 'art pop', 'northeast indian indie', 'desi pop', 'pakistani pop', 'norwegian pop', 'punjabi hip hop', 'desi trap', 'urdu hip hop', 'punjabi pop', 'indian indie', 'pakistani electronic', 'desi hip hop', 'indian singer-songwriter'}
@@ -279,35 +303,75 @@ access_token = get_access_token(client_id, client_secret)
 # update_csv(popularity_df, 'popularity.csv')
 # update_csv(followers_df, 'followers.csv')
 
+files_exist = True
+
 # 1. Read artists list from file. Get today's artists data.
-artist_file = 'artist.csv'
-old_df = pd.read_csv(artist_file)
-artist_list = old_df.name.values[0:10]
+if files_exist:
+    old_artist_df = pd.read_csv('artist.csv')
+    old_popularity_df = pd.read_csv('popularity.csv')
+    old_followers_df = pd.read_csv('followers.csv')
+    artist_list = old_artist_df.name.values[0:10]
 
-artist_data = []
-for a in artist_list:
-    artist_data.append(get_artist_data(a, access_token, True))
+    artist_data = []
+    for a in artist_list:
+        artist_data.append(get_artist_data(a, access_token, True))
 
-df = build_artist_df(artist_data)
+    df = build_artist_df(artist_data)
 
-
-data_timestamp = datetime.datetime.now()
-
-artist_df, popularity_df, followers_df = build_data_dfs(df, data_timestamp)
-
-
-
-IPython.embed()
 
 # 2. Get new artists from genre search. Get today's new artist data.
 
-# 3. Combine all data.
+# Build genre list.
+genres = get_genres(seed_artists[0:2], include_genres, exclude_genres)
 
-# 4. Dump to xslx file.
+# Get all data for artists from these genres.
+new_artist_data = []
+for s in genres:
+    a_list, responses = get_artist_data_from_subgenres(s, access_token)
+    for a in a_list:
+        new_artist_data.append(a)
+new_df = build_artist_df(new_artist_data)
 
-# artist_df.to_csv('artist_2.csv', index=False)
-# popularity_df.to_csv('popularity_2.csv', index=False)
-# followers_df.to_csv('followers_2.csv', index=False)
+
+# Only keep new artists that today exceed the popularity threshold.
+new_df = new_df[new_df.popularity>popularity_threshold]
+new_df = new_df.drop_duplicates(subset='name')
+new_df = new_df.sort_values('name')
+
+# 3. Combine all of today's data, remove duplicates, and create data dfs.
+if files_exist:
+    today_df = pd.concat([df, new_df])
+    today_df = today_df.drop_duplicates(subset='name')
+    today_df = today_df.sort_values('name')
+else:
+    today_df = new_df
+
+data_timestamp = datetime.datetime.now()
+today_artist_df, today_popularity_df, today_followers_df = build_data_dfs(today_df, data_timestamp)
+
+# 4. Merge old and todays's data df.
+if files_exist:
+    full_artist_df = old_artist_df.merge(today_artist_df, how='outer', on='name')
+    full_artist_df = full_artist_df.sort_values(by=['name'])
+
+    full_popularity_df = old_popularity_df.merge(today_popularity_df, how='outer', on='name')
+    full_popularity_df = full_popularity_df.sort_values(by=['name'])
+
+    full_followers_df = old_followers_df.merge(today_followers_df, how='outer', on='name')
+    full_followers_df = full_followers_df.sort_values(by=['name'])
+else:
+    full_artist_df = today_artist_df
+    full_popularity_df = today_popularity_df
+    full_followers_df = today_followers_df
+
+
+# 5. Dump to csv file.
+
+full_artist_df.to_csv('artist.csv', index=False)
+full_popularity_df.to_csv('popularity.csv', index=False)
+full_followers_df.to_csv('followers.csv', index=False)
+
+IPython.embed()
 
 
 # if __name__ == "__main__":
