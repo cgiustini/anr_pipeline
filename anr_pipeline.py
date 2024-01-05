@@ -307,19 +307,19 @@ files_exist = True
 
 # 1. Read artists list from file. Get today's artists data.
 if files_exist:
-    old_artist_df = pd.read_csv('artist.csv')
-    old_popularity_df = pd.read_csv('popularity.csv')
-    old_followers_df = pd.read_csv('followers.csv')
-    artist_list = old_artist_df.name.values[0:10]
+    prev_artist_df = pd.read_csv('artist.csv')
+    prev_popularity_df = pd.read_csv('popularity.csv')
+    prev_followers_df = pd.read_csv('followers.csv')
+    artist_list = prev_artist_df.name.values[0:10]
 
     artist_data = []
     for a in artist_list:
         artist_data.append(get_artist_data(a, access_token, True))
 
-    df = build_artist_df(artist_data)
+    today_df = build_artist_df(artist_data)
 
 
-# 2. Get new artists from genre search. Get today's new artist data.
+# 2. Discover newly popular artists from genre search.
 
 # Build genre list.
 genres = get_genres(seed_artists[0:2], include_genres, exclude_genres)
@@ -330,46 +330,46 @@ for s in genres:
     a_list, responses = get_artist_data_from_subgenres(s, access_token)
     for a in a_list:
         new_artist_data.append(a)
-new_df = build_artist_df(new_artist_data)
+new_today_df = build_artist_df(new_artist_data)
 
 
 # Only keep new artists that today exceed the popularity threshold.
-new_df = new_df[new_df.popularity>popularity_threshold]
-new_df = new_df.drop_duplicates(subset='name')
-new_df = new_df.sort_values('name')
+new_today_df = new_today_df[new_today_df.popularity>popularity_threshold]
+new_today_df = new_today_df.drop_duplicates(subset='name')
+new_today_df = new_today_df.sort_values('name')
 
 # 3. Combine all of today's data, remove duplicates, and create data dfs.
 if files_exist:
-    today_df = pd.concat([df, new_df])
-    today_df = today_df.drop_duplicates(subset='name')
-    today_df = today_df.sort_values('name')
+    final_today_df = pd.concat([today_df, new_today_df])
+    final_today_df = final_today_df.drop_duplicates(subset='name')
+    final_today_df = final_today_df.sort_values('name')
 else:
-    today_df = new_df
+    final_today_df = new_today_df
 
 data_timestamp = datetime.datetime.now()
-today_artist_df, today_popularity_df, today_followers_df = build_data_dfs(today_df, data_timestamp)
+final_today_artist_df, final_today_popularity_df, final_today_followers_df = build_data_dfs(final_today_df, data_timestamp)
 
 # 4. Merge old and todays's data df.
 if files_exist:
-    full_artist_df = old_artist_df.merge(today_artist_df, how='outer', on='name')
-    full_artist_df = full_artist_df.sort_values(by=['name'])
+    final_artist_df = prev_artist_df.merge(final_today_artist_df, how='outer', on='name')
+    final_artist_df = final_artist_df.sort_values(by=['name'])
 
-    full_popularity_df = old_popularity_df.merge(today_popularity_df, how='outer', on='name')
-    full_popularity_df = full_popularity_df.sort_values(by=['name'])
+    final_popularity_df = prev_popularity_df.merge(final_today_popularity_df, how='outer', on='name')
+    final_popularity_df = final_popularity_df.sort_values(by=['name'])
 
-    full_followers_df = old_followers_df.merge(today_followers_df, how='outer', on='name')
-    full_followers_df = full_followers_df.sort_values(by=['name'])
+    final_followers_df = prev_followers_df.merge(final_today_followers_df, how='outer', on='name')
+    final_followers_df = final_followers_df.sort_values(by=['name'])
 else:
-    full_artist_df = today_artist_df
-    full_popularity_df = today_popularity_df
-    full_followers_df = today_followers_df
+    final_artist_df = final_today_artist_df
+    final_popularity_df = final_today_popularity_df
+    final_followers_df = final_today_followers_df
 
 
 # 5. Dump to csv file.
 
-full_artist_df.to_csv('artist.csv', index=False)
-full_popularity_df.to_csv('popularity.csv', index=False)
-full_followers_df.to_csv('followers.csv', index=False)
+final_artist_df.to_csv('artist.csv', index=False)
+final_popularity_df.to_csv('popularity.csv', index=False)
+final_followers_df.to_csv('followers.csv', index=False)
 
 IPython.embed()
 
