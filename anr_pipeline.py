@@ -182,6 +182,20 @@ def update_csv(df, csv_file):
 
     new_df.to_csv(csv_file, index=False)
 
+def build_data_dfs(df, data_timestamp):
+
+    data_timestamp_str = data_timestamp.strftime("%m-%d-%Y, %H:%M:%S")
+
+    artist_df = df[['name', 'id', 'link', 'genres']]
+
+    popularity_df = pd.DataFrame(df['name'])
+    popularity_df[data_timestamp_str] = df['popularity']
+
+    followers_df = pd.DataFrame(df['name'])
+    followers_df[data_timestamp_str] = df['followers']
+
+    return artist_df, popularity_df, followers_df
+
 start_artist_names = [
     'AP Dhillon', 'Raf Saperra', 'Rovalio', 'Divine', 
     'Prateek Kuhad', 'Lisa Mishra','Rahul', 'Abdullah Siddiqui', 'Ikky', 
@@ -211,59 +225,85 @@ artist_names = []
 # # Main process
 access_token = get_access_token(client_id, client_secret)
 
-# Get subgenres from starting artists.
-start_artist_subgenres = []
-for artist in start_artist_names:
-    artist_id = search_artist(artist, access_token)
-    this_start_artist_subgenres = get_artist_genres(artist_id, access_token)
-    for s in this_start_artist_subgenres:
-        start_artist_subgenres.append(s)
+# # Get subgenres from starting artists.
+# start_artist_subgenres = []
+# for artist in start_artist_names:
+#     artist_id = search_artist(artist, access_token)
+#     this_start_artist_subgenres = get_artist_genres(artist_id, access_token)
+#     for s in this_start_artist_subgenres:
+#         start_artist_subgenres.append(s)
 
-# Get unique subgenres.
-start_artist_subgenres = list(set(start_artist_subgenres))
+# # Get unique subgenres.
+# start_artist_subgenres = list(set(start_artist_subgenres))
 
-# Remove unwanted subgenres.
-subgenres = [s for s in start_artist_subgenres if s not in exclude_subgenres]
+# # Remove unwanted subgenres.
+# subgenres = [s for s in start_artist_subgenres if s not in exclude_subgenres]
 
-# import IPython
-# IPython.embed()
+# # import IPython
+# # IPython.embed()
 
-print(subgenres)
+# print(subgenres)
 
-# To-do: go through all subgenres, aggregate all response data, remove repeated entries from all response data, dump names/scores/popularity metrics to csv file.
+# # To-do: go through all subgenres, aggregate all response data, remove repeated entries from all response data, dump names/scores/popularity metrics to csv file.
+# artist_data = []
+# for s in subgenres:
+#     a_list, responses = get_artist_data_from_subgenres(s, access_token)
+#     for a in a_list:
+#         # if a['name'] == 'Sudesh Kumari':
+#         #     import IPython
+#         #     IPython.embed()
+#         artist_data.append(a)
+
+
+# df = build_artist_df(artist_data)
+
+# unique_name, unique_name_idx = np.unique(df['name'], return_index=True)
+# unique_df = df.iloc[unique_name_idx]
+
+# popularity_df = unique_df[unique_df.popularity > popularity_threshold]
+
+# dump_df = popularity_df
+
+# data_timestamp = datetime.datetime.now()
+# data_timestamp_str = data_timestamp.strftime("%m-%d-%Y, %H:%M:%S")
+
+# artist_df = dump_df[['name', 'id', 'link', 'genres']]
+
+# popularity_df = pd.DataFrame(dump_df['name'])
+# popularity_df[data_timestamp_str] = dump_df['popularity']
+
+# followers_df = pd.DataFrame(dump_df['name'])
+# followers_df[data_timestamp_str] = dump_df['followers']
+
+# update_csv(artist_df, 'artist.csv')
+# update_csv(popularity_df, 'popularity.csv')
+# update_csv(followers_df, 'followers.csv')
+
+# 1. Read artists list from file. Get today's artists data.
+artist_file = 'artist.csv'
+old_df = pd.read_csv(artist_file)
+artist_list = old_df.name.values[0:10]
+
 artist_data = []
-for s in subgenres:
-    a_list, responses = get_artist_data_from_subgenres(s, access_token)
-    for a in a_list:
-        # if a['name'] == 'Sudesh Kumari':
-        #     import IPython
-        #     IPython.embed()
-        artist_data.append(a)
-
+for a in artist_list:
+    artist_data.append(get_artist_data(a, access_token, True))
 
 df = build_artist_df(artist_data)
 
-unique_name, unique_name_idx = np.unique(df['name'], return_index=True)
-unique_df = df.iloc[unique_name_idx]
-
-popularity_df = unique_df[unique_df.popularity > popularity_threshold]
-
-dump_df = popularity_df
 
 data_timestamp = datetime.datetime.now()
-data_timestamp_str = data_timestamp.strftime("%m-%d-%Y, %H:%M:%S")
 
-artist_df = dump_df[['name', 'id', 'link', 'genres']]
+artist_df, popularity_df, followers_df = build_data_dfs(df, data_timestamp)
 
-popularity_df = pd.DataFrame(dump_df['name'])
-popularity_df[data_timestamp_str] = dump_df['popularity']
 
-followers_df = pd.DataFrame(dump_df['name'])
-followers_df[data_timestamp_str] = dump_df['followers']
 
-update_csv(artist_df, 'artist.csv')
-update_csv(popularity_df, 'popularity.csv')
-update_csv(followers_df, 'followers.csv')
+IPython.embed()
+
+# 2. Get new artists from genre search. Get today's new artist data.
+
+# 3. Combine all data.
+
+# 4. Dump to xslx file.
 
 # artist_df.to_csv('artist_2.csv', index=False)
 # popularity_df.to_csv('popularity_2.csv', index=False)
