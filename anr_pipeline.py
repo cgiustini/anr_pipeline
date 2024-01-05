@@ -244,64 +244,10 @@ subgenres_refernce = {'hindi indie', 'pakistani indie', 'folk-pop', 'hindi hip h
 search_url = f'https://api.spotify.com/v1/search'
 
 
-artist_names = []
 
 # # Main process
 access_token = get_access_token(client_id, client_secret)
 
-# # Get subgenres from starting artists.
-# start_artist_subgenres = []
-# for artist in start_artist_names:
-#     artist_id = search_artist(artist, access_token)
-#     this_start_artist_subgenres = get_artist_genres(artist_id, access_token)
-#     for s in this_start_artist_subgenres:
-#         start_artist_subgenres.append(s)
-
-# # Get unique subgenres.
-# start_artist_subgenres = list(set(start_artist_subgenres))
-
-# # Remove unwanted subgenres.
-# subgenres = [s for s in start_artist_subgenres if s not in exclude_subgenres]
-
-# # import IPython
-# # IPython.embed()
-
-# print(subgenres)
-
-# # To-do: go through all subgenres, aggregate all response data, remove repeated entries from all response data, dump names/scores/popularity metrics to csv file.
-# artist_data = []
-# for s in subgenres:
-#     a_list, responses = get_artist_data_from_subgenres(s, access_token)
-#     for a in a_list:
-#         # if a['name'] == 'Sudesh Kumari':
-#         #     import IPython
-#         #     IPython.embed()
-#         artist_data.append(a)
-
-
-# df = build_artist_df(artist_data)
-
-# unique_name, unique_name_idx = np.unique(df['name'], return_index=True)
-# unique_df = df.iloc[unique_name_idx]
-
-# popularity_df = unique_df[unique_df.popularity > popularity_threshold]
-
-# dump_df = popularity_df
-
-# data_timestamp = datetime.datetime.now()
-# data_timestamp_str = data_timestamp.strftime("%m-%d-%Y, %H:%M:%S")
-
-# artist_df = dump_df[['name', 'id', 'link', 'genres']]
-
-# popularity_df = pd.DataFrame(dump_df['name'])
-# popularity_df[data_timestamp_str] = dump_df['popularity']
-
-# followers_df = pd.DataFrame(dump_df['name'])
-# followers_df[data_timestamp_str] = dump_df['followers']
-
-# update_csv(artist_df, 'artist.csv')
-# update_csv(popularity_df, 'popularity.csv')
-# update_csv(followers_df, 'followers.csv')
 
 files_exist = True
 
@@ -310,7 +256,7 @@ if files_exist:
     prev_artist_df = pd.read_csv('artist.csv')
     prev_popularity_df = pd.read_csv('popularity.csv')
     prev_followers_df = pd.read_csv('followers.csv')
-    artist_list = prev_artist_df.name.values[0:10]
+    artist_list = prev_artist_df.name.values
 
     artist_data = []
     for a in artist_list:
@@ -343,6 +289,7 @@ if files_exist:
     final_today_df = pd.concat([today_df, new_today_df])
     final_today_df = final_today_df.drop_duplicates(subset='name')
     final_today_df = final_today_df.sort_values('name')
+    new_artist_idx = [i not in today_df.name.values for i in new_today_df.name.values]
 else:
     final_today_df = new_today_df
 
