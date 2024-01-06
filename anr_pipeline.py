@@ -7,6 +7,7 @@ import os
 import pickle
 import numpy as np
 import copy
+import yaml
 import IPython
 
 
@@ -210,36 +211,23 @@ def get_genres(seed_artists, include_genres, exclude_genres):
         for s in this_artist_genres:
             seed_artist_genres.append(s)
 
+    genres += seed_artist_genres
+
     # Remove genres in exclude genres.
-    genres = [s for s in seed_artist_genres if s not in exclude_genres]
+    genres = [s for s in genres if s not in exclude_genres]
 
     # Remove duplicate genres.
     genres = list(set(genres))
 
     return genres
-    
 
-seed_artists = [
-    'AP Dhillon', 'Raf Saperra', 'Rovalio', 'Divine', 
-    'Prateek Kuhad', 'Lisa Mishra','Rahul', 'Abdullah Siddiqui', 'Ikky', 
-    'Shubh', 'Karan Aujla', 'Hassan Raheem', 'AUR', 'King', 'Sharn', 
-    'Ranj', 'Clifr', 'Umair', 'Abhi The Nomad', 'MC Stan','Young Stunners',
-    'Prabh Singh', 'Prabh Deep', 'Lifafa', 'Badshah', 'Taimoor Baig', 'Umair'
-]
-# start_artist_names = [
-#     'AP Dhillon'
-# ]
+with open('config.yaml', 'r') as stream:
+    cfg = yaml.safe_load(stream)
 
-
-
-popularity_threshold = 50
-
-
-include_genres = []
-exclude_genres = ['art pop', 'chicago rap', 'norwegian pop', 'folk-pop']
-
-# Subgenre strings for reference.
-subgenres_refernce = {'hindi indie', 'pakistani indie', 'folk-pop', 'hindi hip hop', 'bhangra', 'pakistani hip hop', 'art pop', 'northeast indian indie', 'desi pop', 'pakistani pop', 'norwegian pop', 'punjabi hip hop', 'desi trap', 'urdu hip hop', 'punjabi pop', 'indian indie', 'pakistani electronic', 'desi hip hop', 'indian singer-songwriter'}
+seed_artists = cfg['seed_artists']
+include_genres = cfg['include_genres']
+exclude_genres = cfg['exclude_genres']
+popularity_threshold = cfg['popularity_threshold']
 
 search_url = f'https://api.spotify.com/v1/search'
 
@@ -249,7 +237,8 @@ search_url = f'https://api.spotify.com/v1/search'
 access_token = get_access_token(client_id, client_secret)
 
 
-files_exist = True
+files_exist = os.path.isfile('artist.csv')
+print(files_exist)
 
 # 1. Read artists list from file. Get today's artists data.
 if files_exist:
@@ -268,7 +257,7 @@ if files_exist:
 # 2. Discover newly popular artists from genre search.
 
 # Build genre list.
-genres = get_genres(seed_artists[0:2], include_genres, exclude_genres)
+genres = get_genres(seed_artists, include_genres, exclude_genres)
 
 # Get all data for artists from these genres.
 new_artist_data = []
@@ -318,7 +307,7 @@ final_artist_df.to_csv('artist.csv', index=False)
 final_popularity_df.to_csv('popularity.csv', index=False)
 final_followers_df.to_csv('followers.csv', index=False)
 
-IPython.embed()
+# IPython.embed()
 
 
 # if __name__ == "__main__":
