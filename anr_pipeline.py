@@ -1,4 +1,5 @@
 import requests
+from dataclasses import dataclass
 import base64
 import json
 import pandas as pd
@@ -9,6 +10,15 @@ import numpy as np
 import copy
 import yaml
 import IPython
+
+
+
+
+@dataclass
+class ArtistData:
+    artist: None
+    popularity: None
+    followers: None
 
 
 # Spotify API credentials
@@ -196,7 +206,31 @@ def build_data_dfs(df, data_timestamp):
     followers_df = pd.DataFrame(df['name'])
     followers_df[data_timestamp_str] = df['followers']
 
-    return artist_df, popularity_df, followers_df
+    d = ArtistData(artist_df, popularity_df, followers_df)
+
+    return d
+
+def merge_artist_data(d1, d2):
+
+    output_d = ArtistData(None, None, None)
+
+    if d1.artist is not None and d2.artist is not None:
+        output_d.artist = d1.artist.merge(d2.artist, how='outer', on='name')
+        output_d.artist = output_d.artist.sort_values(by=['name'])
+
+        output_d.popularity = d1.popularity.merge(d2.popularity, how='outer', on='name')
+        output_d.popularity = output_d.popularity.sort_values(by=['name'])
+
+        output_d.followers = d1.followers.merge(d2.followers, how='outer', on='name')
+        output_d.followers  = output_d.followers.sort_values(by=['name'])
+    elif d1.artist is None:
+        output_d = copy.copy(d1)
+    elif d2.artist is None:
+        output_d = copy.copy(d2)
+    else:
+        pass
+
+    return output_d
 
 def get_genres(seed_artists, include_genres, exclude_genres):
 
@@ -221,195 +255,76 @@ def get_genres(seed_artists, include_genres, exclude_genres):
 
     return genres
 
-with open('config.yaml', 'r') as stream:
-    cfg = yaml.safe_load(stream)
+def run_artist_discovery(access_token, cfg):
 
-seed_artists = cfg['seed_artists']
-include_genres = cfg['include_genres']
-exclude_genres = cfg['exclude_genres']
-popularity_threshold = cfg['popularity_threshold']
+    # Get cfg.
+    seed_artists = cfg['seed_artists']
+    include_genres = cfg['include_genres']
+    exclude_genres = cfg['exclude_genres']
+    popularity_threshold = cfg['popularity_threshold']
 
-search_url = f'https://api.spotify.com/v1/search'
+    # Build genre list.
+    genres = get_genres(seed_artists, include_genres, exclude_genres)
 
+    # Get all data for artists from these genres.
+    new_artist_data = []
+    for s in genres:
+        a_list, responses = get_artist_data_from_subgenres(s, access_token)
+        for a in a_list:
+            new_artist_data.append(a)
+    df = build_artist_df(new_artist_data)
 
+    # Only keep new artists that today exceed the popularity threshold.
+    df = df[df.popularity>popularity_threshold]
+    df = df.drop_duplicates(subset='name')
+    df = df.sort_values('name')
 
-# # Main process
-access_token = get_access_token(client_id, client_secret)
-
-
-files_exist = os.path.isfile('artist.csv')
-print(files_exist)
-
-# 1. Read artists list from file. Get today's artists data.
-if files_exist:
-    prev_artist_df = pd.read_csv('artist.csv')
-    prev_popularity_df = pd.read_csv('popularity.csv')
-    prev_followers_df = pd.read_csv('followers.csv')
-    artist_list = prev_artist_df.name.values
-
-    artist_data = []
-    for a in artist_list:
-        artist_data.append(get_artist_data(a, access_token, True))
-
-    today_df = build_artist_df(artist_data)
+    return df
 
 
-# 2. Discover newly popular artists from genre search.
-
-# Build genre list.
-genres = get_genres(seed_artists, include_genres, exclude_genres)
-
-# Get all data for artists from these genres.
-new_artist_data = []
-for s in genres:
-    a_list, responses = get_artist_data_from_subgenres(s, access_token)
-    for a in a_list:
-        new_artist_data.append(a)
-new_today_df = build_artist_df(new_artist_data)
-
-
-# Only keep new artists that today exceed the popularity threshold.
-new_today_df = new_today_df[new_today_df.popularity>popularity_threshold]
-new_today_df = new_today_df.drop_duplicates(subset='name')
-new_today_df = new_today_df.sort_values('name')
-
-# 3. Combine all of today's data, remove duplicates, and create data dfs.
-if files_exist:
-    final_today_df = pd.concat([today_df, new_today_df])
-    final_today_df = final_today_df.drop_duplicates(subset='name')
-    final_today_df = final_today_df.sort_values('name')
-    new_artist_idx = [i not in today_df.name.values for i in new_today_df.name.values]
-else:
-    final_today_df = new_today_df
-
-data_timestamp = datetime.datetime.now()
-final_today_artist_df, final_today_popularity_df, final_today_followers_df = build_data_dfs(final_today_df, data_timestamp)
-
-# 4. Merge old and todays's data df.
-if files_exist:
-    final_artist_df = prev_artist_df.merge(final_today_artist_df, how='outer', on='name')
-    final_artist_df = final_artist_df.sort_values(by=['name'])
-
-    final_popularity_df = prev_popularity_df.merge(final_today_popularity_df, how='outer', on='name')
-    final_popularity_df = final_popularity_df.sort_values(by=['name'])
-
-    final_followers_df = prev_followers_df.merge(final_today_followers_df, how='outer', on='name')
-    final_followers_df = final_followers_df.sort_values(by=['name'])
-else:
-    final_artist_df = final_today_artist_df
-    final_popularity_df = final_today_popularity_df
-    final_followers_df = final_today_followers_df
-
-
-# 5. Dump to csv file.
-
-final_artist_df.to_csv('artist.csv', index=False)
-final_popularity_df.to_csv('popularity.csv', index=False)
-final_followers_df.to_csv('followers.csv', index=False)
-
-# IPython.embed()
-
-
-# if __name__ == "__main__":
-
+if __name__ == "__main__":
     
+    enable_artist_discovery = True
+    enable_artist_update = True
+
+    with open('config.yaml', 'r') as stream:
+        cfg = yaml.safe_load(stream)
+
+    search_url = f'https://api.spotify.com/v1/search'
+
+    # Main process
+    access_token = get_access_token(client_id, client_secret)
+
+
+
+    data_timestamp = datetime.datetime.now()
+
+    # 1. Read artists list from file. Get today's artists data.
+    if enable_artist_update:
+        prev_artist_df = pd.read_csv('artist.csv')
+        prev_popularity_df = pd.read_csv('popularity.csv')
+        prev_followers_df = pd.read_csv('followers.csv')
+        prev_data = ArtistData(prev_artist_df, prev_popularity_df, prev_followers_df)
+        artist_list = prev_artist_df.name.values
+
+        artist_data = []
+        for a in artist_list:
+            artist_data.append(get_artist_data(a, access_token, True))
+
+        today_df = build_artist_df(artist_data)
+
+        today_data = build_data_dfs(today_df, data_timestamp)
+        final_data = merge_artist_data(prev_data, today_data)
+
+        final_data.artist.to_csv('artist.csv', index=False)
+        final_data.popularity.to_csv('popularity.csv', index=False)
+        final_data.followers.to_csv('followers.csv', index=False)
+
+    # 2. Discover newly popular artists from genre search.
+    if enable_artist_discovery:
+        new_today_df = run_artist_discovery(access_token, cfg['artist_discovery'])
+        new_today_data = build_data_dfs(new_today_df, data_timestamp)
+        new_today_data.artist.to_csv('artist_discover.csv', index=False)
+        new_today_data.popularity.to_csv('popularity_discover.csv', index=False)
+        new_today_data.followers.to_csv('followers_discover.csv', index=False)
     
-#     df1 = pd.read_csv('popularity.csv')
-#     df2 = pd.read_csv('popularity_2.csv')
-
-#     df3 = df1.merge(df2, how='outer', on='name')
-#     df3 = df3.sort_values(by=['name'])
-#     df3.to_csv('popularity_3.csv', index=False)
-
-#     IPython.embed()
-    
-
-# # Remove duplicate entries of artist data.
-# unique_artist_data = remove_duplicates_from_artist_data(artist_data)
-
-# # Filter by popularity score.
-# popular_artist_data = filter_artists_by_popularity(unique_artist_data, popularity_threshold)
-
-# # Code for saving all responses to json file. First remove unneeded fields (that aren't useful)
-# # and save all the data to a json file.
-
-# rm_fields = ['external_urls', 'href', 'images', 'type', 'uri']
-# metadata_fields = ['name', 'id', 'genres']
-
-# popular_artist_metadata = []
-
-# for a in popular_artist_data:
-#     for f in rm_fields:
-#         del a[f]
-#     metadata = {}
-#     for m in metadata_fields:
-#         metadata[m] = a[m]
-#     popular_artist_metadata.append(metadata)
-
-
-# genres_correct = True
-# subgenres_check = subgenres
-# for a in unique_artist_data:
-#     this_genres_correct = np.any([g in subgenres_check for g in a['genres']])
-#     print(a['name'], a['genres']) if not this_genres_correct else None
-#     genres_correct = this_genres_correct & np.any([g in subgenres for g in a['genres']])
-
-
-# # dfs = [pd.DataFrame(a) for a in unique_artist_data]
-# # df = pd.concat(dfs)
-
-
-# # Create 
-# popularity_df_data = {a['name']:[a['popularity']] for a in popular_artist_data}
-# followers_df_data = {a['name']:[a['followers']['total']] for a in popular_artist_data}
-
-# data_timestamp = datetime.datetime.now()
-# data_timestamp_str = data_timestamp.strftime("%m-%d-%Y, %H:%M:%S")
-
-# popularity_df = pd.DataFrame.from_dict(popularity_df_data)
-# popularity_df['time'] = [data_timestamp_str]
-# followers_df = pd.DataFrame.from_dict(followers_df_data)
-# followers_df['time'] = [data_timestamp_str]
-
-
-# # Saving the objects:
-# with open('objs.pkl', 'wb') as f: 
-#     pickle.dump([a_list, responses], f)
-
-
-# popularity_csv_file = 'popularity.csv'
-# if os.path.isfile(popularity_csv_file):
-#     all_popularity_df = pd.read_csv(popularity_csv_file)
-#     all_popularity_df = pd.concat([all_popularity_df, popularity_df])
-# else:
-#     all_popularity_df = popularity_df
-# col = all_popularity_df.pop("time")
-# all_popularity_df.insert(0, col.name, col)
-# all_popularity_df.to_csv(popularity_csv_file, index=False)
-
-# followers_csv_file = 'followers.csv'
-# if os.path.isfile(followers_csv_file):
-#     all_followers_df = pd.read_csv(followers_csv_file)
-#     all_followers_df = pd.concat([all_followers_df, followers_df])
-
-# else:
-#     all_followers_df = followers_df
-# col = all_followers_df.pop("time")
-# all_followers_df.insert(0, col.name, col)
-# all_followers_df.to_csv(followers_csv_file, index=False)
-
-
-# artist_metadata_file = 'artist_metadata.json'
-# if os.path.isfile(artist_metadata_file):
-#     with open(artist_metadata_file , "r") as f:
-#         all_popular_artist_metadata = json.load(f)
-#     all_popular_artist_metadata = all_popular_artist_metadata + popular_artist_data
-#     all_popular_artist_metadata = remove_duplicates_from_artist_data(all_popular_artist_metadata)
-# else:
-#     all_popular_artist_metadata = popular_artist_metadata
-# with open(artist_metadata_file , "w") as f:
-#     json.dump(popular_artist_metadata, f, indent=4)
-
-
-# import IPython
-# IPython.embed()
