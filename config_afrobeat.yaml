@@ -1,0 +1,23 @@
+
+
+# artist_discovery:
+#     popularity_threshold: 50
+
+#     seed_artists: [
+#         'AP Dhillon', 'Raf Saperra', 'Rovalio'
+#     ]
+
+#     include_genres: ["bhojpuri pop"]
+
+#     exclude_genres: ['art pop', 'chicago rap', 'norwegian pop', 'folk-pop']
+
+artist_discovery:
+    popularity_threshold: 20
+
+    seed_artists: [
+        'davido'
+    ]
+
+    include_genres: ['afrobeat']
+
+    exclude_genres: ['art pop', 'chicago rap', 'norwegian pop', 'folk-pop']

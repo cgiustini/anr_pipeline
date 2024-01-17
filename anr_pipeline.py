@@ -284,10 +284,13 @@ def run_artist_discovery(access_token, cfg):
 
 if __name__ == "__main__":
     
-    enable_artist_discovery = False
-    enable_artist_update = True
+    enable_artist_discovery = True
+    enable_artist_update = False
 
-    with open('config.yaml', 'r') as stream:
+    # config_file = 'config.yaml'
+    config_file = 'config_afrobeat.yaml'
+
+    with open(config_file, 'r') as stream:
         cfg = yaml.safe_load(stream)
 
     search_url = f'https://api.spotify.com/v1/search'
