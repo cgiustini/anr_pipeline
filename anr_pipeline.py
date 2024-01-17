@@ -284,7 +284,7 @@ def run_artist_discovery(access_token, cfg):
 
 if __name__ == "__main__":
     
-    enable_artist_discovery = True
+    enable_artist_discovery = False
     enable_artist_update = True
 
     with open('config.yaml', 'r') as stream:
@@ -299,17 +299,17 @@ if __name__ == "__main__":
 
     data_timestamp = datetime.datetime.now()
 
-    # 1. Read artists list from file. Get today's artists data.
+    # 1. Read artists list from file. Get today's artists data. Use id to avoid issues caused by name changes etc...
     if enable_artist_update:
         prev_artist_df = pd.read_csv('artist.csv')
         prev_popularity_df = pd.read_csv('popularity.csv')
         prev_followers_df = pd.read_csv('followers.csv')
         prev_data = ArtistData(prev_artist_df, prev_popularity_df, prev_followers_df)
-        artist_list = prev_artist_df.name.values
+        artist_id_list = prev_artist_df.id_x.values
 
         artist_data = []
-        for a in artist_list:
-            artist_data.append(get_artist_data(a, access_token, True))
+        for a in artist_id_list:
+            artist_data.append(get_artist_data(a, access_token))
 
         today_df = build_artist_df(artist_data)
 
