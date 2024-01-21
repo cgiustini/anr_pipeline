@@ -210,11 +210,61 @@ def build_data_dfs(df, data_timestamp):
 
     return d
 
+def diff_and_update_artist_data(d1, d2): 
+
+    updated_d1 = copy.deepcopy(d1)
+
+    diff_fields = ['name', 'genres', 'link']
+
+    # Get the entries in the data corresponding to the same id and put it in a temp dataframe.
+    suffixes=['_x', '_y']
+    temp_d = d1.artist.merge(d2.artist, how='inner', on='id', suffixes=suffixes)
+
+    for ch in diff_fields:
+
+        # For each field of interest, look for a diff between the two datasets.
+        ch_x = ch + suffixes[0]
+        ch_y = ch + suffixes[1]
+        equal_ch = ch + '_changed'
+        temp_d[equal_ch] = np.equal(temp_d[ch_x].values, temp_d[ch_y].values)
+        changed_idx = np.where(np.invert(temp_d[equal_ch].values))[0]
+
+        # Update the returned copy of d1 to be updated with new values
+        # from  d2. Log any changes for reporting and debugging.
+        for i in changed_idx:
+            id = temp_d.id.values[i]
+
+            old_value = temp_d[ch_x].values[i]
+            new_value = temp_d[ch_y].values[i]
+
+            if ch in updated_d1.artist.keys():
+                updated_d1.artist[ch][np.where(d1.artist.id.values==id)[0][0]] = new_value
+
+            if ch in updated_d1.popularity.keys():
+                updated_d1.popularity[ch][np.where(d1.popularity.id.values==id)[0][0]] = new_value
+    
+            if ch in updated_d1.followers.keys():
+                updated_d1.followers[ch][np.where(d1.followers.id.values==id)[0][0]] = new_value
+
+            txt = "ID {id} changed artist atttribute '{ch}'' from '{old_value}' to '{new_value}'"
+            txt = txt.format(id=id, ch=ch, old_value=str(old_value), new_value=str(new_value))
+            print(txt)
+
+
+    return updated_d1
+
+   
+    
+
+
 def merge_artist_data(d1, d2):
 
     output_d = ArtistData(None, None, None)
 
     if d1.artist is not None and d2.artist is not None:
+
+        d1  = diff_and_update_artist_data(d1, d2)
+
         # output_d.artist = d1.artist.merge(d2.artist, how='outer', on='name')
         output_d.artist = d1.artist.merge(d2.artist, how='outer', on='id', suffixes=[None, '_y'])
         output_d.artist = output_d.artist.sort_values(by=['name'])
