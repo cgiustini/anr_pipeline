@@ -200,10 +200,10 @@ def build_data_dfs(df, data_timestamp):
 
     artist_df = df[['name', 'id', 'link', 'genres']]
 
-    popularity_df = pd.DataFrame(df['name'])
+    popularity_df = pd.DataFrame(df[['name', 'id']])
     popularity_df[data_timestamp_str] = df['popularity']
 
-    followers_df = pd.DataFrame(df['name'])
+    followers_df = pd.DataFrame(df[['name', 'id']])
     followers_df[data_timestamp_str] = df['followers']
 
     d = ArtistData(artist_df, popularity_df, followers_df)
@@ -215,13 +215,16 @@ def merge_artist_data(d1, d2):
     output_d = ArtistData(None, None, None)
 
     if d1.artist is not None and d2.artist is not None:
-        output_d.artist = d1.artist.merge(d2.artist, how='outer', on='name')
+        # output_d.artist = d1.artist.merge(d2.artist, how='outer', on='name')
+        output_d.artist = d1.artist.merge(d2.artist, how='outer', on='id', suffixes=[None, '_y'])
         output_d.artist = output_d.artist.sort_values(by=['name'])
 
-        output_d.popularity = d1.popularity.merge(d2.popularity, how='outer', on='name')
+        # output_d.popularity = d1.popularity.merge(d2.popularity, how='outer', on='name')
+        output_d.popularity = d1.popularity.merge(d2.popularity, how='outer', on='id', suffixes=[None, '_y'])
         output_d.popularity = output_d.popularity.sort_values(by=['name'])
 
-        output_d.followers = d1.followers.merge(d2.followers, how='outer', on='name')
+        # output_d.followers = d1.followers.merge(d2.followers, how='outer', on='name')
+        output_d.followers = d1.followers.merge(d2.followers, how='outer', on='id', suffixes=[None, '_y'])
         output_d.followers  = output_d.followers.sort_values(by=['name'])
     elif d1.artist is None:
         output_d = copy.copy(d1)
@@ -284,8 +287,8 @@ def run_artist_discovery(access_token, cfg):
 
 if __name__ == "__main__":
     
-    enable_artist_discovery = True
-    enable_artist_update = False
+    enable_artist_discovery = False
+    enable_artist_update = True
 
     # config_file = 'config.yaml'
     config_file = 'config_afrobeat.yaml'
@@ -308,10 +311,11 @@ if __name__ == "__main__":
         prev_popularity_df = pd.read_csv('popularity.csv')
         prev_followers_df = pd.read_csv('followers.csv')
         prev_data = ArtistData(prev_artist_df, prev_popularity_df, prev_followers_df)
-        artist_id_list = prev_artist_df.id_x.values
+        artist_id_list = prev_artist_df.id.values
 
         artist_data = []
         for a in artist_id_list:
+            print(a)
             artist_data.append(get_artist_data(a, access_token))
 
         today_df = build_artist_df(artist_data)
