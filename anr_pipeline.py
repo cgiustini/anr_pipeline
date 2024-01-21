@@ -268,14 +268,18 @@ def merge_artist_data(d1, d2):
         # output_d.artist = d1.artist.merge(d2.artist, how='outer', on='name')
         output_d.artist = d1.artist.merge(d2.artist, how='outer', on='id', suffixes=[None, '_y'])
         output_d.artist = output_d.artist.sort_values(by=['name'])
+        output_d.artist = output_d.artist.drop(columns=['name_y', 'genres_y', 'link_y'])
 
         # output_d.popularity = d1.popularity.merge(d2.popularity, how='outer', on='name')
         output_d.popularity = d1.popularity.merge(d2.popularity, how='outer', on='id', suffixes=[None, '_y'])
         output_d.popularity = output_d.popularity.sort_values(by=['name'])
+        output_d.popularity = output_d.popularity.drop(columns=['name_y'])
 
         # output_d.followers = d1.followers.merge(d2.followers, how='outer', on='name')
         output_d.followers = d1.followers.merge(d2.followers, how='outer', on='id', suffixes=[None, '_y'])
         output_d.followers  = output_d.followers.sort_values(by=['name'])
+        output_d.followers = output_d.followers.drop(columns=['name_y'])
+    
     elif d1.artist is None:
         output_d = copy.copy(d1)
     elif d2.artist is None:
