@@ -233,6 +233,7 @@ def diff_and_update_artist_data(d1, d2):
         # from  d2. Log any changes for reporting and debugging.
         for i in changed_idx:
             id = temp_d.id.values[i]
+            name = temp_d.name.values[i]
 
             old_value = temp_d[ch_x].values[i]
             new_value = temp_d[ch_y].values[i]
@@ -246,8 +247,8 @@ def diff_and_update_artist_data(d1, d2):
             if ch in updated_d1.followers.keys():
                 updated_d1.followers[ch][np.where(d1.followers.id.values==id)[0][0]] = new_value
 
-            txt = "ID {id} changed artist atttribute '{ch}'' from '{old_value}' to '{new_value}'"
-            txt = txt.format(id=id, ch=ch, old_value=str(old_value), new_value=str(new_value))
+            txt = "ID {id} with  name {name} changed artist atttribute '{ch}' from '{old_value}' to '{new_value}'"
+            txt = txt.format(id=id, name=name, ch=ch, old_value=str(old_value), new_value=str(new_value))
             print(txt)
 
 
