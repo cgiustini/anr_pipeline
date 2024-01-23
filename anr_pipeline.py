@@ -339,6 +339,24 @@ def run_artist_discovery(access_token, cfg):
 
     return df
 
+def write_xlsx(xlsx_path, artist_data):
+
+    writer = pd.ExcelWriter(xlsx_path, engine='openpyxl')
+    artist_data.artist.to_excel(writer, sheet_name='artist', index=False)
+    artist_data.popularity.to_excel(writer, sheet_name='popularity', index=False)
+    artist_data.followers.to_excel(writer, sheet_name='followers', index=False)
+    writer.save()
+    writer.close()
+
+def read_xlsx(xlsx_path):
+
+    artist_df = pd.read_excel(xlsx_path, 'artist', engine='openpyxl')
+    popularity_df =  pd.read_excel(xlsx_path, 'popularity', engine='openpyxl')
+    followers_df = pd.read_excel(xlsx_path, 'followers', engine='openpyxl')
+
+
+    return ArtistData(artist_df, popularity_df, followers_df)
+
 
 if __name__ == "__main__":
     
@@ -362,11 +380,8 @@ if __name__ == "__main__":
 
     # 1. Read artists list from file. Get today's artists data. Use id to avoid issues caused by name changes etc...
     if enable_artist_update:
-        prev_artist_df = pd.read_csv('artist.csv')
-        prev_popularity_df = pd.read_csv('popularity.csv')
-        prev_followers_df = pd.read_csv('followers.csv')
-        prev_data = ArtistData(prev_artist_df, prev_popularity_df, prev_followers_df)
-        artist_id_list = prev_artist_df.id.values
+        prev_data = read_xlsx('artist.xlsx')
+        artist_id_list = prev_data.artist.id.values
 
         artist_data = []
         for a in artist_id_list:
@@ -378,15 +393,10 @@ if __name__ == "__main__":
         today_data = build_data_dfs(today_df, data_timestamp)
         final_data = merge_artist_data(prev_data, today_data)
 
-        final_data.artist.to_csv('artist.csv', index=False)
-        final_data.popularity.to_csv('popularity.csv', index=False)
-        final_data.followers.to_csv('followers.csv', index=False)
+        write_xlsx('artist.xlsx', final_data)
 
     # 2. Discover newly popular artists from genre search.
     if enable_artist_discovery:
         new_today_df = run_artist_discovery(access_token, cfg['artist_discovery'])
         new_today_data = build_data_dfs(new_today_df, data_timestamp)
-        new_today_data.artist.to_csv('artist_discover.csv', index=False)
-        new_today_data.popularity.to_csv('popularity_discover.csv', index=False)
-        new_today_data.followers.to_csv('followers_discover.csv', index=False)
-    
+        write_xlsx('artist_discovery.xlsx', new_today_data)
