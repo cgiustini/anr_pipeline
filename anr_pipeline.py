@@ -233,7 +233,8 @@ def diff_and_update_artist_data(d1, d2):
         # from  d2. Log any changes for reporting and debugging.
         for i in changed_idx:
             id = temp_d.id.values[i]
-            name = temp_d.name.values[i]
+            name_ch = 'name' + suffixes[0]
+            name = getattr(temp_d, name_ch).values[i]
 
             old_value = temp_d[ch_x].values[i]
             new_value = temp_d[ch_y].values[i]
@@ -345,7 +346,6 @@ def write_xlsx(xlsx_path, artist_data):
     artist_data.artist.to_excel(writer, sheet_name='artist', index=False)
     artist_data.popularity.to_excel(writer, sheet_name='popularity', index=False)
     artist_data.followers.to_excel(writer, sheet_name='followers', index=False)
-    writer.save()
     writer.close()
 
 def read_xlsx(xlsx_path):
